@@ -1,3 +1,2 @@
-certs/
-config/
+certs/*
 node_modules/
