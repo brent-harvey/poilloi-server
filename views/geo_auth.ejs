@@ -1,0 +1,231 @@
+<div class="w3-container"></div>
+
+<link rel="stylesheet" href="ol.css">
+<script src="ol.js"></script>
+<style type="text/css">
+    .map {height: 550px; width: 100%; }
+    .tbl_poilist {height: 550px; width: 100%; }
+</style>
+
+<button class="w3-button w3-dark-grey" id="sendbutton">Start  <i class="fa fa-play"></i></button>
+<button class="w3-button w3-dark-grey" id="stopbutton">Stop  <i class="fa fa-stop"></i></button>
+<div class="w3-twothird">
+    <h5>Nearby</h5>
+    <div id="map" class="map"></div>
+</div>
+<div class="w3-third">
+    <h5>Feeds</h5>
+    <table class="w3-table w3-striped w3-bordered w3-border w3-hoverable w3-white" id="tbl_poilist">
+        <thead>
+            <tr>
+                <th scope="col">Icon</th>
+                <th scope="col">Name</th>
+            </tr>
+        </thead>
+        <tbody overflow: auto>
+
+        </tbody>
+    </table>
+  </div>
+<script>
+
+    const attribution = new ol.control.Attribution({
+      collapsible: false,
+    });
+
+    const tileLayer = new ol.layer.Tile({
+        source: new ol.source.OSM()
+    });
+
+    const poi_layer = new ol.layer.Vector({
+        //target: "points",
+        source: new ol.source.Vector(),
+        style: function (feature) {
+            poi_style.getText().setText(feature.get('text'));
+            return poi_style;
+        }
+    });
+
+    const current_loc_layer = new ol.layer.Vector({
+        //target: "points",
+        source: new ol.source.Vector(),
+    });
+
+    const poi_style = new ol.style.Style({
+        image: new ol.style.Icon({
+            anchor: [0.5, 0.5],
+            anchorXUnits: "fraction",
+            anchorYUnits: "fraction",
+            src: "poilloi_pin.png",
+        }),
+        text: new ol.style.Text({
+            font: '15px Calibri,sans-serif',
+            fill: new ol.style.Fill({ color: '#000' }),
+            stroke: new ol.style.Stroke({
+                color: '#fff', width: 2
+            }),
+            offsetY: 18,
+        })
+    });
+
+    function addMarker(lonlat, txt) {
+        var source = poi_layer.getSource();
+        var pointFeature = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.fromLonLat(lonlat, osm_map.getView().getProjection())),
+            text: txt
+        });
+        source.addFeature(pointFeature);
+    }
+
+    function addLoc(lonlat) {
+        var source = current_loc_layer.getSource();
+        var geom = new ol.geom.Point(ol.proj.fromLonLat(lonlat, osm_map.getView().getProjection()));
+        var feature = new ol.Feature(geom);
+        source.addFeature(feature);
+        flash(feature);
+    }
+
+    const duration = 10000;
+    function flash(feature) {
+        const start = Date.now();
+        const flashGeom = feature.getGeometry().clone();
+        const listenerKey = tileLayer.on('postrender', animate);
+
+        function animate(event) {
+            const frameState = event.frameState;
+            const elapsed = frameState.time - start;
+            if (elapsed >= duration) {
+                ol.Observable.unByKey(listenerKey);
+                return;
+            }
+            const vectorContext = ol.render.getVectorContext(event);
+            const elapsedRatio = elapsed / duration;
+            // radius will be 5 at start and 30 at end.
+            const radius = ol.easing.easeOut(elapsedRatio) * 25 + 5;
+            const opacity = ol.easing.easeOut(1 - elapsedRatio);
+
+            const style = new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: radius,
+                    stroke: new ol.style.Stroke({
+                        color: 'rgba(255, 0, 0, ' + opacity + ')',
+                        width: 0.25 + opacity,
+                    }),
+                }),
+            });
+
+            vectorContext.setStyle(style);
+            vectorContext.drawGeometry(flashGeom);
+            // tell OpenLayers to continue postrender animation
+            osm_map.render();
+        }
+    }
+
+    const osm_map = new ol.Map({
+      layers: [
+        tileLayer,
+        poi_layer,
+        current_loc_layer
+      ],
+      controls: ol.control.defaults.defaults({attribution: false}).extend([attribution]),
+      target: 'map',
+      view: new ol.View({
+        constrainResolution: true,
+        center: ol.proj.fromLonLat([-85.0, 34.0]),
+        zoom: 14
+      })
+    });
+</script>
+
+<script>
+const socket = io();
+
+let watch_id;
+let current_lat = 0.0;
+let current_lon = 0.0;
+
+socket.on('connect', () => {
+});
+socket.on('poi_list', (data) => {
+    var poi_coords = JSON.parse(data.coords);
+    addMarker([poi_coords.coordinates[0], poi_coords.coordinates[1]],data.name);
+    addPOITable('<i class="fa fa-comment w3-text-red w3-large"></i>', data.name);
+    console.log("trying to add "+poi_coords.coordinates[0]);
+
+});
+
+var el = document.getElementById("sendbutton");
+if (el.addEventListener){
+    el.addEventListener("click", sendMessage, false);
+}else if (el.attachEvent){
+    el.attachEvent('onclick', sendMessage);
+}
+
+var el = document.getElementById("stopbutton");
+if (el.addEventListener){
+    el.addEventListener("click", stopMessage, false);
+}else if (el.attachEvent){
+    el.attachEvent('onclick', stopMessage);
+}
+
+function sendMessage() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(initPosition, error);
+        watch_id = navigator.geolocation.watchPosition(showPosition, error);
+    } else {
+    }
+}
+
+function stopMessage() {
+
+    if (navigator.geolocation) {
+        navigator.geolocation.clearWatch(watch_id);
+    }
+} 
+
+function showPosition(position) {
+    const crd = position.coords;
+    new_lat = Math.round(crd.latitude*100000)/100000
+    new_lon = Math.round(crd.longitude*100000)/100000
+
+    if (current_lat === new_lat && current_lon === new_lon) {
+    }else{
+        socket.emit('new message', JSON.stringify({ "lat": new_lat , "lon": new_lon }));
+        current_lat = new_lat;
+        current_lon = new_lon;
+    }
+}
+
+function initPosition(position) {
+    const crd = position.coords;
+    new_lat = Math.round(crd.latitude*100000)/100000;
+    new_lon = Math.round(crd.longitude*100000)/100000;
+    
+    socket.emit('init position', JSON.stringify({ "lat": new_lat , "lon": new_lon }));
+    current_lat = new_lat;
+    current_lon = new_lon;
+    init_Map();
+}
+
+function error(err) {
+    console.error(`ERROR(${err.code}): ${err.message}`);
+}
+
+function init_Map() {
+
+    osm_map.getView().animate({center: ol.proj.fromLonLat([current_lon, current_lat])}, {zoom: 12});
+    addLoc([current_lon, current_lat]);
+
+}
+
+function addPOITable(cell_1, cell_2) {
+            const table = document.getElementById("tbl_poilist").getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+            const cell1 = newRow.insertCell(0);
+            const cell2 = newRow.insertCell(1);
+            cell1.innerHTML = cell_1;
+            cell2.innerHTML = cell_2;
+}
+</script>
+
+</div>

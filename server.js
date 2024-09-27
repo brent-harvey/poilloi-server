@@ -74,6 +74,7 @@ const wrap = middleware => (socket, next) => middleware(socket.request, {}, next
   
   io.on('connect', (socket) => {
     console.log(`new connection ${socket.id}`);
+    socket.data.userid = socket.request.user.userid;
     socket.on('whoami', (cb) => {
       cb(socket.request.user ? socket.request.user.username : '');
     });
@@ -88,10 +89,7 @@ const wrap = middleware => (socket, next) => middleware(socket.request, {}, next
         }).catch(err => {
             console.error(err);
         });
-//        socket.broadcast.emit('new message', {
-//            username: socket.username,
-//            message: data
-//        });
+
     });
     socket.on('init position', (data) => {
       // we tell the client to execute 'new message'
@@ -127,10 +125,9 @@ async function initUser(userid, lat, lon, socket_id) {
     await dbclient.query('BEGIN')
     const accData = await dbclient.query('SELECT poi_id, name, ST_AsGeoJson(a.geog) coords FROM poilloi_data a WHERE ST_DWithin(a.geog, ST_MakePoint($1, $2), 10000);', [lon, lat]);
     accData.rows.forEach(row => {
-      //client.set(userid, row.poi_id, row.coords ).then(() => {
+
       client.executeCommand('SET ' + userid + ' ' + row.poi_id + ' OBJECT ' + row.coords ).then(() => {
-      //client.set(userid, row.poi_id, '[' + row.coords.coordinates[1] + ', ' + row.coords.coordinates[0] + ']' ).then(() => {
-        console.log("added feature " + row.name + ' at ' + row.coords + ' for user ' + userid + ' on socket ' + socket_id);
+         console.log("added feature " + row.name + ' at ' + row.coords + ' for user ' + userid + ' on socket ' + socket_id);
         io.to(socket_id).emit("poi_list",{name: row.name, coords: row.coords, poi_id: row.poi_id});
       }).catch(err => {
         console.error(err);

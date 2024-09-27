@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const passport = require('passport')
 
-
+/*
 router.get('/', (req, res) => {
     if (req.isAuthenticated()) {
         res.render('index', {
@@ -18,23 +18,74 @@ router.get('/', (req, res) => {
         })
     }
 })
-
-router.get('/login', (req, res) => {
+*/
+router.get('/', (req, res) => {
     if (req.isAuthenticated()) {
-        req.flash('message', 'Your are already logged in.')
-        res.redirect('/profile')
+        res.render('index', {
+            title: 'Home',
+            user: req.user,
+            message: res.locals.message
+        })
     } else {
-        res.render('login', {
-            title: 'Login',
+        res.render('index', {
+            title: 'Home',
             user: req.user,
             message: res.locals.message
         })
     }
 })
+router.get('/', (req, res) => {
+    if (req.isAuthenticated()) {
+        res.render('index', {
+            title: 'Home',
+            user: req.user,
+            message: res.locals.message
+        })
+    } else {
+        res.render('index', {
+            title: 'Home',
+            user: req.user,
+            message: res.locals.message
+        })
+    }
+})
+router.get('/sidebar', (req, res) => {
+    if (req.isAuthenticated()) {
+        res.render('sidebar_auth', {
+            title: 'Home',
+            user: req.user,
+            message: res.locals.message
+        })
+    } else {
+        res.render('sidebar_noauth')
+    }
+})
+router.get('/main', (req, res) => {
+    if (req.isAuthenticated()) {
+        res.render('main_auth', {
+            title: 'Home',
+            user: req.user,
+            message: res.locals.message
+        })
+    } else {
+        res.render('main_noauth')
+    }
+})
+router.get('/geo', (req, res) => {
+    if (req.isAuthenticated()) {
+        res.render('geo_auth', {
+            title: 'Home',
+            user: req.user,
+            message: res.locals.message
+        })
+    } else {
+        res.render('main_noauth')
+    }
+})
 router.post('/login', (req, res, next) => {
     if (req.isAuthenticated()) {
         req.flash('message', 'You are already logged in.')
-        res.redirect('/profile')
+        res.redirect('/index')
     } else {
         let user = (req.body.username).toLowerCase()
         let pass = req.body.password

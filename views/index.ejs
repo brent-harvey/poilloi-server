@@ -1,168 +1,86 @@
-<%- include('partials/header') %>
-
+<!DOCTYPE html>
+<html>
+<head>
+<title>Poilloi Dashboard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="w3.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
+</style>
+<script src="/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.socket.io/4.7.5/socket.io.js"></script>
+</head>
+<body class="w3-light-grey">
 
-            <h1>Home</h1>
-            <p>Welcome to the home page, <%= user.username %> (<%= user.userid %>)!</p>
+<!-- Top container -->
+<div class="w3-bar w3-top w3-black w3-large" style="z-index:4">
+    <button class="w3-bar-item w3-button w3-hide-large w3-hover-none w3-hover-text-light-grey" onclick="w3_open();"><i class="fa fa-bars"></i>  Menu</button>
+    <span class="w3-bar-item w3-right">Logo</span>
+</div>
 
-            <p>Authenticated!</p>
-            <p>Socket ID: <span id="socketId"></span></p>
-            <p>Username: <span id="username"></span></p>
-
-            <ul id="messages"></ul>
-
-                <input class="input" id="sckt_msg" autocomplete="off" /><button id="sendbutton">Send</button><button id="stopbutton">Stop</button>
-
-                <div id="map" class="map"></div>
-                <script>
-              
-                    const attribution = new ol.control.Attribution({
-                      collapsible: false,
-                    });
-
-                    ol.Map.prototype.addMarker = function(lonlat, style) {
-
-                        var feature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat(lonlat, this.getView().getProjection())));
-
-                        const iconStyle = new ol.style.Style({
-                            image: new ol.style.Icon({
-                                anchor: [0.5, 46],
-                                anchorXUnits: 'fraction',
-                                anchorYUnits: 'pixels',
-                                src: 'poilloi_pin.png',
-                            }),
-                        });
-
-                        if (style === undefined) {
-                            //var kml = new ol.format.KML().writeFeatures([feature]);
-                            //kmlFeature = new ol.format.KML().readFeature(kml);
-                            //feature.setStyle(kmlFeature.getStyle());
-                            feature.setStyle(iconStyle);
-                        } else {
-                            feature.setStyle(style);
-                        }
-
-                        var layer = new ol.layer.Vector({
-                            source: new ol.source.Vector({
-                                features: [feature]
-                            })
-                        });
-                        this.addLayer(layer);
-
-                        return layer; // e.g. to allow it to be removed
-
-                    }
-              
-                    const osm_map = new ol.Map({
-                      layers: [
-                        new ol.layer.Tile({
-                            source: new ol.source.OSM()
-                        })
-                      ],
-                      controls: ol.control.defaults.defaults({attribution: false}).extend([attribution]),
-                      target: 'map',
-                      view: new ol.View({
-                        constrainResolution: true,
-                        center: ol.proj.fromLonLat([16.62662018, 49.2125578]),
-                        zoom: 14
-                      })
-                    });
-                  </script>
-
-            <script>
-                const socket = io();
-                const socketIdSpan = document.getElementById("socketId");
-                const usernameSpan = document.getElementById("username");
-                
-                let watch_id;
-                let current_lat = 0.0;
-                let current_lon = 0.0;
-      
-                socket.on('connect', () => {
-                  socketIdSpan.innerText = socket.id;
-      
-                  socket.emit('whoami', (username) => {
-                    usernameSpan.innerText = username;
-                  });
-                });
-                socket.on('poi_list', (data) => {
-                    socketIdSpan.innerText = socketIdSpan.innerText + '\n' + data.name;
-                    var poi_coords = JSON.parse(data.coords);
-                    osm_map.addMarker([poi_coords.coordinates[0], poi_coords.coordinates[1]]);
-                    console.log("trying to add "+poi_coords.coordinates[0]);
-      
-                });
-
-                var el = document.getElementById("sendbutton");
-                if (el.addEventListener){
-                    el.addEventListener("click", sendMessage, false);
-                }else if (el.attachEvent){
-                    el.attachEvent('onclick', sendMessage);
-                }
-
-                var el = document.getElementById("stopbutton");
-                if (el.addEventListener){
-                    el.addEventListener("click", stopMessage, false);
-                }else if (el.attachEvent){
-                    el.attachEvent('onclick', stopMessage);
-                }
-
-                function sendMessage() {
-                    if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(initPosition, error);
-                        watch_id = navigator.geolocation.watchPosition(showPosition, error);
-                    } else {
-                        document.getElementById('sckt_msg').value = "Geolocation is not supported by this browser.";
-                    }
-                }
-
-                function stopMessage() {
-
-                    if (navigator.geolocation) {
-                        navigator.geolocation.clearWatch(watch_id);
-                    }
-                } 
-
-                function showPosition(position) {
-                    const crd = position.coords;
-                    new_lat = Math.round(crd.latitude*100000)/100000
-                    new_lon = Math.round(crd.longitude*100000)/100000
-
-                    if (current_lat === new_lat && current_lon === new_lon) {
-                    }else{
-                        socket.emit('new message', JSON.stringify({ "lat": new_lat , "lon": new_lon }));
-                        current_lat = new_lat;
-                        current_lon = new_lon;
-                    }
-                }
-
-                function initPosition(position) {
-                    const crd = position.coords;
-                    new_lat = Math.round(crd.latitude*100000)/100000;
-                    new_lon = Math.round(crd.longitude*100000)/100000;
-                    
-                    socket.emit('init position', JSON.stringify({ "lat": new_lat , "lon": new_lon }));
-                    current_lat = new_lat;
-                    current_lon = new_lon;
-                    init_Map();
-                }
-
-                function error(err) {
-                    console.error(`ERROR(${err.code}): ${err.message}`);
-                }
-
-                function init_Map() {
-
-                    osm_map.getView().animate({center: ol.proj.fromLonLat([current_lon, current_lat])}, {zoom: 13});
-
-                }
-                </script>
-
-
-
-
-
-
-
-
-<%- include('partials/footer') %>
+<!-- Sidebar/menu -->
+<nav class="w3-sidebar w3-collapse w3-white w3-animate-left" style="z-index:3;width:300px;" id="mySidebar"><br>
+    <script>
+        $(document).ready(function() {
+          $('#mySidebar').load('/sidebar');
+        });
+    </script>
+</nav>
+  
+  
+  <!-- Overlay effect when opening sidebar on small screens -->
+  <div class="w3-overlay w3-hide-large w3-animate-opacity" onclick="w3_close()" style="cursor:pointer" title="close side menu" id="myOverlay"></div>
+  
+  <!-- !PAGE CONTENT! -->
+  <div class="w3-main" style="margin-left:300px;margin-top:43px;">
+  
+    <!-- Header -->
+    <header class="w3-container" style="padding-top:22px">
+      <h5><b><i class="fa fa-dashboard"></i> My Dashboard</b></h5>
+    </header>
+    <div class="w3-main" id="myMain">
+      <script>
+        $(document).ready(function() {
+          $('#myMain').load('/main');
+        });
+      </script>
+    </div>
+    <!-- Footer -->
+    <footer class="w3-container w3-padding-16 w3-light-grey">
+      <h4>FOOTER</h4>
+      <p>Powered by <a href="https://www.w3schools.com/w3css/default.asp" target="_blank">w3.css</a></p>
+    </footer>
+  
+    <!-- End page content -->
+  </div>
+  
+  <script>
+  // Get the Sidebar
+  var mySidebar = document.getElementById("mySidebar");
+  
+  // Get the DIV with overlay effect
+  var overlayBg = document.getElementById("myOverlay");
+  
+  // Toggle between showing and hiding the sidebar, and add overlay effect
+  function w3_open() {
+    if (mySidebar.style.display === 'block') {
+      mySidebar.style.display = 'none';
+      overlayBg.style.display = "none";
+    } else {
+      mySidebar.style.display = 'block';
+      overlayBg.style.display = "block";
+    }
+  }
+  
+  // Close the sidebar with the close button
+  function w3_close() {
+    mySidebar.style.display = "none";
+    overlayBg.style.display = "none";
+  }
+  </script>
+  
+  </body>
+  </html>
