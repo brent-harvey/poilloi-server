@@ -34,15 +34,15 @@ router.get('/', (req, res) => {
         })
     }
 })
-router.get('/', (req, res) => {
+router.get('/login', (req, res) => {
     if (req.isAuthenticated()) {
-        res.render('index', {
+        res.render('profie', {
             title: 'Home',
             user: req.user,
             message: res.locals.message
         })
     } else {
-        res.render('index', {
+        res.render('login', {
             title: 'Home',
             user: req.user,
             message: res.locals.message
