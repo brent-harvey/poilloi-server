@@ -15,14 +15,15 @@ const pool = require('./config/database.js');
 
 const client = new Tile38();
 
-const privateKey  = fs.readFileSync('certs/poilloi.test.key', 'utf8');
-const certificate = fs.readFileSync('certs/poilloi.test.crt', 'utf8');
-const credentials = {key: privateKey, cert: certificate};
+//const privateKey  = fs.readFileSync('certs/poilloi.test.key', 'utf8');
+//const certificate = fs.readFileSync('certs/poilloi.test.crt', 'utf8');
+//const credentials = {key: privateKey, cert: certificate};
 
 
 const app = express()
 const httpServer = createServer(app)
-const httpsServer = createHttpsServer.createServer(credentials, app)
+//const httpsServer = createHttpsServer.createServer(credentials, app)
+const httpsServer = createHttpsServer.createServer(app)
 const io = new Server(httpsServer)
 
 const PORT = process.env.PORT || 3000
