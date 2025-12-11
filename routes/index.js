@@ -29,7 +29,7 @@ router.get('/', (req, res) => {
     } else {
         res.render('index', {
             title: 'Home',
-            user: req.user,
+            //user: req.user,
             message: res.locals.message
         })
     }
@@ -44,7 +44,7 @@ router.get('/login', (req, res) => {
     } else {
         res.render('login', {
             title: 'Home',
-            user: req.user,
+            //user: req.user,
             message: res.locals.message
         })
     }
