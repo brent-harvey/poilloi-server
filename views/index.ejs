@@ -3,11 +3,16 @@
 <script src="https://cdn.socket.io/4.7.5/socket.io.js"></script>
 
             <h1>Home</h1>
+                <% if (req.isAuthenticated()) { %>
             <p>Welcome to the home page, <%= user.username %> (<%= user.userid %>)!</p>
 
             <p>Authenticated!</p>
             <p>Socket ID: <span id="socketId"></span></p>
             <p>Username: <span id="username"></span></p>
+                <% } else { %>
+             <p>Welcome!</p>
+                <% } %>
+
 
             <ul id="messages"></ul>
 
