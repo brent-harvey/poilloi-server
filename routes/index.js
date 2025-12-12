@@ -27,7 +27,7 @@ router.get('/', (req, res) => {
             message: res.locals.message
         })
     } else {
-        res.render('index', {
+        res.render('indexPrompt', {
             title: 'Home',
             //user: req.user,
             message: res.locals.message
